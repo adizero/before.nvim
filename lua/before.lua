@@ -154,10 +154,9 @@ function M.get_line_content(location)
   return line_content
 end
 
-M.show_edits_default_opts = nil
 M.custom_show_edits_default_opts_fn = nil
 
-function M.init_show_edits_default_opts_fn()
+local function show_edits_default_opts()
   local finders = require('telescope.finders')
   local conf = require('telescope.config').values
 
@@ -196,14 +195,10 @@ end
 function M.show_edits_in_telescope(opts)
   local pickers = require('telescope.pickers')
 
-  if not M.show_edits_default_opts then
-    M.show_edits_default_opts = M.init_show_edits_default_opts_fn()
-  end
-
   opts = opts or {}
   local opts_finder = opts.finder
   -- vim.tbl_deep_extend somehow corrupts the passed opts.finder table
-  opts = vim.tbl_deep_extend("force", M.show_edits_default_opts, opts)
+  opts = vim.tbl_deep_extend("force", show_edits_default_opts(), opts)
   if opts_finder then
       opts.finder = opts_finder
   end
