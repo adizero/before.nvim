@@ -139,7 +139,7 @@ local function load_buf_line(bufnr, linenum)
   return trim(vim.api.nvim_buf_get_lines(bufnr, linenum - 1, linenum, false)[1])
 end
 
-local function get_line_content(location)
+function M.get_line_content(location)
   local line_content = nil
 
   if bufvalid(location.bufnr) then
@@ -154,17 +154,19 @@ local function get_line_content(location)
   return line_content
 end
 
-function M.show_edits_in_telescope(opts)
-  local pickers = require('telescope.pickers')
+M.show_edits_default_opts = nil
+M.custom_show_edits_default_opts_fn = nil
+
+function M.init_show_edits_default_opts_fn()
   local finders = require('telescope.finders')
   local conf = require('telescope.config').values
 
-  local default_opts = {
+  local defaults = {
     prompt_title = "Edit Locations",
     finder = finders.new_table({
       results = M.edit_locations,
       entry_maker = function(entry)
-        local line_content = get_line_content(entry)
+        local line_content = M.get_line_content(entry)
         return {
           value = entry.file .. entry.line,
           display = entry.line .. ':' .. entry.bufnr .. '| ' .. line_content,
@@ -179,16 +181,40 @@ function M.show_edits_in_telescope(opts)
     sorter = conf.generic_sorter({}),
     previewer = conf.grep_previewer({}),
   }
+  if M.custom_show_edits_default_opts_fn then
+    local opts = M.custom_show_edits_default_opts_fn() or {}
+    local opts_finder = opts.finder
+    -- vim.tbl_deep_extend somehow corrupts the passed opts.finder table
+    defaults = vim.tbl_deep_extend("force", defaults, opts)
+    if opts_finder then
+        defaults.finder = opts_finder
+    end
+  end
+  return defaults
+end
 
-  opts = vim.tbl_deep_extend("force", default_opts, opts or {})
+function M.show_edits_in_telescope(opts)
+  local pickers = require('telescope.pickers')
 
-  pickers.new({ preview_title = "Preview" }, opts):find()
+  if not M.show_edits_default_opts then
+    M.show_edits_default_opts = M.init_show_edits_default_opts_fn()
+  end
+
+  opts = opts or {}
+  local opts_finder = opts.finder
+  -- vim.tbl_deep_extend somehow corrupts the passed opts.finder table
+  opts = vim.tbl_deep_extend("force", M.show_edits_default_opts, opts)
+  if opts_finder then
+      opts.finder = opts_finder
+  end
+
+  pickers.new({}, opts):find()
 end
 
 function M.show_edits_in_quickfix()
   local qf_entries = {}
   for _, location in pairs(M.edit_locations) do
-    local line_content = get_line_content(location)
+    local line_content = M.get_line_content(location)
     if bufvalid(location.bufnr) then
       table.insert(qf_entries, { bufnr = location.bufnr, lnum = location.line, col = location.col, text = line_content })
     else
