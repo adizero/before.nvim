@@ -120,7 +120,10 @@ local function find_forward_jump(currentLocation)
 end
 
 local function trim(s)
-  return (s:gsub("^%s*(.-)%s*$", "%1"))
+  if not s then
+    return ''
+  end
+  return s:gsub("^%s*(.-)%s*$", "%1")
 end
 
 local function load_file_line(file, linenum)
