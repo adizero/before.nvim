@@ -192,6 +192,17 @@ local function show_edits_default_opts()
   return defaults
 end
 
+-- newest edits first
+function M.create_sorted_edit_locations()
+  local sorted = {}
+  local i = 1
+  for _, location in pairs(M.edit_locations) do
+      sorted[#M.edit_locations - i + 1] = location
+      i = i + 1
+  end
+  return sorted
+end
+
 function M.show_edits_in_telescope(opts)
   local pickers = require('telescope.pickers')
 
@@ -208,7 +219,7 @@ end
 
 function M.show_edits_in_quickfix()
   local qf_entries = {}
-  for _, location in pairs(M.edit_locations) do
+  for _, location in pairs(M.create_sorted_edit_locations()) do
     local line_content = M.get_line_content(location)
     if bufvalid(location.bufnr) then
       table.insert(qf_entries, { bufnr = location.bufnr, lnum = location.line, col = location.col, text = line_content })
