@@ -43,6 +43,7 @@ local function assign_location(new_location, location_idx, new_cursor)
   M.edit_locations[location_idx] = new_location
   M.cursor = new_cursor
   M.dedupe_table[key] = #M.edit_locations
+  vim.g.BEFORE_EDIT_LOCATIONS = M.edit_locations
 end
 
 local function find_backwards_jump(currentLocation)
@@ -57,10 +58,12 @@ local function find_backwards_jump(currentLocation)
       local new_bufnr = vim.api.nvim_get_current_buf()
       location['bufnr'] = new_bufnr
       M.edit_locations[local_cursor] = location
+      vim.g.BEFORE_EDIT_LOCATIONS = M.edit_locations
     end
 
     if location and should_remove(location) then
       table.remove(M.edit_locations, local_cursor)
+      vim.g.BEFORE_EDIT_LOCATIONS = M.edit_locations
     else
       if location and not same_line(currentLocation, location) then
         M.cursor = local_cursor
@@ -73,6 +76,7 @@ local function find_backwards_jump(currentLocation)
     local fallback_location = M.edit_locations[#M.edit_locations]
     if fallback_location and should_remove(fallback_location) then
       table.remove(M.edit_locations, #M.edit_locations)
+      vim.g.BEFORE_EDIT_LOCATIONS = M.edit_locations
     else
       M.cursor = #M.edit_locations
       return fallback_location
@@ -94,10 +98,12 @@ local function find_forward_jump(currentLocation)
       local new_bufnr = vim.api.nvim_get_current_buf()
       location['bufnr'] = new_bufnr
       M.edit_locations[local_cursor] = location
+      vim.g.BEFORE_EDIT_LOCATIONS = M.edit_locations
     end
 
     if location and should_remove(location) then
       table.remove(M.edit_locations, local_cursor)
+      vim.g.BEFORE_EDIT_LOCATIONS = M.edit_locations
     else
       if location and not same_line(currentLocation, location) then
         M.cursor = local_cursor
@@ -110,6 +116,7 @@ local function find_forward_jump(currentLocation)
     local fallback_location = M.edit_locations[1]
     if fallback_location and should_remove(fallback_location) then
       table.remove(M.edit_locations, 1)
+      vim.g.BEFORE_EDIT_LOCATIONS = M.edit_locations
     else
       M.cursor = 1
       return fallback_location
@@ -174,7 +181,7 @@ local function show_edits_default_opts()
           display = entry.line .. ':' .. entry.bufnr .. '| ' .. line_content,
           ordinal = entry.line .. ':' .. entry.bufnr .. '| ' .. line_content,
           filename = entry.file,
-          bufnr = entry.bufnr,
+          -- bufnr = entry.bufnr, -- telescope picker strongly prefers bufnr, but won't accept non-existent number
           lnum = entry.line,
           col = entry.col,
         }
@@ -257,6 +264,7 @@ function M.track_edit()
 
   if #M.edit_locations > M.max_entries then
     table.remove(M.edit_locations, 1)
+    vim.g.BEFORE_EDIT_LOCATIONS = M.edit_locations
     M.cursor = M.max_entries
   end
 end
@@ -308,6 +316,18 @@ function M.setup(opts)
   M.max_entries = opts.history_size
   M.history_wrap_enabled = opts.history_wrap_enabled
   M.telescope_for_preview = opts.telescope_for_preview
+
+  -- restore edit locations from shada global variable vim.g.BEFORE_EDIT_LOCATIONS
+  M.edit_locations = vim.g.BEFORE_EDIT_LOCATIONS or {}
+  while #M.edit_locations > M.max_entries do
+    table.remove(M.edit_locations, 1)
+  end
+  M.cursor = #M.edit_locations
+  for _, location in pairs(M.edit_locations) do
+    -- force reopen of new buffers (stored buffer numbers point to wrong buffers after nvim restart)
+    location.bufnr = -1
+  end
+  vim.g.BEFORE_EDIT_LOCATIONS = M.edit_locations
 
   vim.api.nvim_create_autocmd({ "TextChanged", "InsertEnter" }, {
     pattern = "*",
