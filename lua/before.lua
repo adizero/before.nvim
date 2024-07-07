@@ -82,7 +82,7 @@ local function find_backwards_jump(currentLocation)
       return fallback_location
     end
   else
-    print("[before.nvim]: At the end of the edits list.")
+    return nil
   end
 end
 
@@ -122,7 +122,7 @@ local function find_forward_jump(currentLocation)
       return fallback_location
     end
   else
-    print("[before.nvim]: At the front of the edits list.")
+    return nil
   end
 end
 
@@ -274,13 +274,30 @@ function M.track_edit()
   end
 end
 
-function M.jump_to_last_edit()
+--- Jumps to the last edit location
+-- @param count number|nil Allows to jump multiple times (defaults to v:count1)
+-- @return nil
+function M.jump_to_last_edit(count)
+  if not count then
+    count = vim.v.count1
+  end
   if #M.edit_locations > 0 then
     local bufnr = vim.api.nvim_get_current_buf()
     local pos = vim.api.nvim_win_get_cursor(0)
     local current = { bufnr = bufnr, line = pos[1], col = pos[2] }
 
-    local new_location = find_backwards_jump(current)
+    local new_location = nil
+    while current and count > 0 do
+      current = find_backwards_jump(current)
+      if current then
+        new_location = current
+      end
+      count = count - 1
+    end
+
+    if not new_location then
+        print("[before.nvim]: At the oldest entry of the edits list.")
+    end
 
     if new_location then
       vim.api.nvim_win_set_buf(0, new_location.bufnr)
@@ -291,13 +308,31 @@ function M.jump_to_last_edit()
   end
 end
 
-function M.jump_to_next_edit()
+--- Jumps to the next edit location
+--- @param count number|nil Allows to jump multiple times (defaults to v:count1)
+--- @return nil
+function M.jump_to_next_edit(count)
+  if not count then
+    count = vim.v.count1
+  end
   if #M.edit_locations > 0 then
     local bufnr = vim.api.nvim_get_current_buf()
     local pos = vim.api.nvim_win_get_cursor(0)
     local current = { bufnr = bufnr, line = pos[1], col = pos[2] }
 
-    local new_location = find_forward_jump(current)
+    local new_location = nil
+    while current and count > 0 do
+      current = find_forward_jump(current)
+      if current then
+        new_location = current
+      end
+      count = count - 1
+    end
+
+    if not new_location then
+        print("[before.nvim]: At the newest entry of the edits list.")
+        return
+    end
 
     if new_location then
       vim.api.nvim_win_set_buf(0, new_location.bufnr)
