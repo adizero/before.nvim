@@ -189,6 +189,7 @@ local function show_edits_default_opts()
     }),
     sorter = conf.generic_sorter({}),
     previewer = conf.grep_previewer({}),
+    default_selection_index = #M.edit_locations - M.cursor + 1,
   }
   if M.custom_show_edits_default_opts_fn then
     local opts = M.custom_show_edits_default_opts_fn() or {}
@@ -241,6 +242,10 @@ function M.show_edits_in_quickfix()
 
   vim.fn.setqflist({}, 'r', { title = 'Edit Locations', items = qf_entries })
   vim.cmd([[copen]])
+  local selection_index = #M.edit_locations - M.cursor
+  if selection_index > 0 then
+      vim.cmd(string.format([[normal! %dj]], selection_index))
+  end
 end
 
 -- DEPRECATED, but don't want to brake the users by removing.
