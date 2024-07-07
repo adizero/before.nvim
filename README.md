@@ -1,5 +1,48 @@
 # before.nvim
 
+## Fork changes
+* Edit locations persistence across nvim restarts using shada file global variable storage
+* Supports normal mode counts that allow jump to last/next edit command multiplication
+* Selects current edit location cursor in telescope/quickfix
+* Exposes get_line_content and custom_show_edits_default_opts_fn for easier telescope picker customization
+* Reverses edit locations to see newest edits first when using telescope/quickfix
+* Fixes empty/nil input handling bugs
+
+### Example with get_line_content and custom_show_edits_default_opts_fn
+```lua
+    local before = require('before')
+    before.setup({
+        history_size = 100,
+        history_wrap_enabled = false
+    })
+
+    -- will be merged to the before's default opts (necessary to get the same config via ":Telescope before")
+    before.custom_show_edits_default_opts_fn = function()
+        local finders = require('telescope.finders')
+        local opts = {
+            preview_title = nil,  -- we want to have filename as preview window title
+            finder = finders.new_table({
+                results = before.create_sorted_edit_locations(),
+                entry_maker = function(entry)
+                    -- local short_path = require("utils").shorten_path(entry.file, true, true)
+                    local short_path = entry.file
+                    local line_content = before.get_line_content(entry)
+                    return {
+                        value = entry.file .. entry.line,
+                        display = short_path .. ':' .. entry.line .. ':' ..  entry.col .. '| ' .. line_content,
+                        ordinal = entry.file .. ':' .. entry.line .. ':' ..  entry.col .. '| ' .. line_content,
+                        filename = entry.file,
+                        -- bufnr = entry.bufnr,  -- force telescope to use filename instead of bufnr (necessary)
+                        lnum = entry.line,
+                        col = entry.col,
+                    }
+                end,
+            }),
+        }
+        return opts
+    end
+```
+
 ## Purpose
 Track edit locations and jump back to them, like [changelist](https://neovim.io/doc/user/motion.html#changelist), but across buffers.
 
