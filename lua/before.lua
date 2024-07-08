@@ -53,7 +53,7 @@ local function find_backwards_jump(currentLocation)
     local_cursor = local_cursor - i
     local location = M.edit_locations[local_cursor]
 
-    if location and not bufvalid(location.bufnr) then
+    if location and not bufvalid(location.bufnr) and location.file and location.file ~= '' then
       vim.cmd.edit(location.file)
       local new_bufnr = vim.api.nvim_get_current_buf()
       location['bufnr'] = new_bufnr
@@ -93,7 +93,7 @@ local function find_forward_jump(currentLocation)
     local_cursor = local_cursor + i
     local location = M.edit_locations[local_cursor]
 
-    if location and not bufvalid(location.bufnr) then
+    if location and not bufvalid(location.bufnr) and location.file and location.file ~= '' then
       vim.cmd.edit(location.file)
       local new_bufnr = vim.api.nvim_get_current_buf()
       location['bufnr'] = new_bufnr
@@ -133,7 +133,39 @@ local function trim(s)
   return s:gsub("^%s*(.-)%s*$", "%1")
 end
 
+--- Read a line from a file (uses file:seek to determine position)
+--- @param filename string Path to the file
+--- @param linenum number Number of the line to read
+--- @return string|nil, string|nil The line content (or nil if error), error message (or nil if no error)
+local function read_line_from_file(filename, linenum)
+    local file = io.open(filename, "r")
+    if not file then
+        return nil, "UNABLE-TO-OPEN-FILE"
+    end
+
+    local position = 0
+    for i = 1, linenum - 1 do
+        file:seek("set", position)
+        local line = file:read("*line")
+        if not line then
+            file:close()
+            return nil, "LINE-NUMBER-EXCEEDS-FILE-LENGTH"
+        end
+        position = file:seek()
+    end
+
+    file:seek("set", position)
+    local line = file:read("*line")
+    file:close()
+
+    return line
+end
+
 local function load_file_line(file, linenum)
+  local _, error = vim.loop.fs_stat(file)
+  if error ~= nil then
+    return nil
+  end
   local cnt = 1
   for line in io.lines(file) do
     if cnt == linenum then
@@ -155,10 +187,15 @@ function M.get_line_content(location)
   if bufvalid(location.bufnr) then
     line_content = load_buf_line(location.bufnr, location.line)
   else
-    line_content = load_file_line(location.file, location.line)
+    line_content, error = read_line_from_file(location.file, location.line)
+    if line_content == nil then
+      line_content = string.format("[%s]", error)
+    end
   end
 
-  if line_content == '' then
+  if line_content == nil then
+    line_content = "[INVALID-LINE]"
+  elseif line_content == '' then
     line_content = "[EMPTY-LINE]"
   end
   return line_content
