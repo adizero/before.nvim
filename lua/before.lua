@@ -312,9 +312,10 @@ function M.track_edit()
 end
 
 --- Jumps to the last edit location
--- @param count number|nil Allows to jump multiple times (defaults to v:count1)
--- @return nil
-function M.jump_to_last_edit(count)
+--- @param skip boolean|nil Skip over and do not count edits in the same file (defaults to false)
+--- @param count number|nil Allows to jump multiple times (defaults to v:count1)
+--- @return nil
+function M.jump_to_last_edit(skip, count)
   if not count then
     count = vim.v.count1
   end
@@ -328,11 +329,13 @@ function M.jump_to_last_edit(count)
       current = find_backwards_jump(current)
       if current then
         new_location = current
+        if bufnr ~= current.bufnr or not skip then
+            count = count - 1
+        end
       end
-      count = count - 1
     end
 
-    if not new_location then
+    if not new_location or bufnr == new_location.bufnr and skip then
         print("[before.nvim]: At the oldest entry of the edits list.")
     end
 
@@ -346,9 +349,10 @@ function M.jump_to_last_edit(count)
 end
 
 --- Jumps to the next edit location
+--- @param skip boolean|nil Skip over and do not count edits in the same file (defaults to false)
 --- @param count number|nil Allows to jump multiple times (defaults to v:count1)
 --- @return nil
-function M.jump_to_next_edit(count)
+function M.jump_to_next_edit(skip, count)
   if not count then
     count = vim.v.count1
   end
@@ -362,11 +366,13 @@ function M.jump_to_next_edit(count)
       current = find_forward_jump(current)
       if current then
         new_location = current
+        if bufnr ~= current.bufnr or not skip then
+            count = count - 1
+        end
       end
-      count = count - 1
     end
 
-    if not new_location then
+    if not new_location or bufnr == new_location.bufnr and skip then
         print("[before.nvim]: At the newest entry of the edits list.")
         return
     end

@@ -5,6 +5,7 @@
 * Supports normal mode counts that allow jump to last/next edit command multiplication
 * Selects current edit location cursor in telescope/quickfix
 * Exposes get_line_content and custom_show_edits_default_opts_fn for easier telescope picker customization
+* Supports skpping edits in the same file when jumping to last/next edits (can be bound to different keys)
 * Reverses edit locations to see newest edits first when using telescope/quickfix
 * Fixes empty/nil input handling bugs
 
@@ -41,6 +42,17 @@
         }
         return opts
     end
+```
+### Example mapping with jump_to_last_edit and jump_to_next_edit together with skipping edits in the same file variants
+```lua
+vim.keymap.set('n', 'z;', function() before.jump_to_last_edit() end,
+    { desc = "Jump to previous edit" })
+vim.keymap.set('n', 'Z;', function() before.jump_to_last_edit(true) end,
+    { desc = "Jump to previous file edit" })
+vim.keymap.set('n', 'z,', function() before.jump_to_next_edit() end,
+    { desc = "Jump to next edit" })
+vim.keymap.set('n', 'Z,', function() before.jump_to_next_edit(true) end,
+    { desc = "Jump to next file edit" })
 ```
 
 ## Purpose
