@@ -328,7 +328,8 @@ function M.jump_to_last_edit(skip, count)
     count = vim.v.count1
   end
   if #M.edit_locations > 0 then
-    local bufnr = vim.api.nvim_get_current_buf()
+    local initial_bufnr = vim.api.nvim_get_current_buf()
+    local bufnr = initial_bufnr
     local pos = vim.api.nvim_win_get_cursor(0)
     local current = { bufnr = bufnr, line = pos[1], col = pos[2] }
 
@@ -339,12 +340,16 @@ function M.jump_to_last_edit(skip, count)
         new_location = current
         if bufnr ~= current.bufnr or not skip then
             count = count - 1
+            bufnr = current.bufnr
         end
       end
     end
 
-    if not new_location or bufnr == new_location.bufnr and skip then
+    if not new_location then
         print("[before.nvim]: At the oldest entry of the edits list.")
+        return
+    elseif initial_bufnr == new_location.bufnr and skip then
+        print("[before.nvim]: Jumped within the oldest file of the edits list.")
     end
 
     if new_location then
@@ -365,7 +370,8 @@ function M.jump_to_next_edit(skip, count)
     count = vim.v.count1
   end
   if #M.edit_locations > 0 then
-    local bufnr = vim.api.nvim_get_current_buf()
+    local initial_bufnr = vim.api.nvim_get_current_buf()
+    local bufnr = initial_bufnr
     local pos = vim.api.nvim_win_get_cursor(0)
     local current = { bufnr = bufnr, line = pos[1], col = pos[2] }
 
@@ -376,13 +382,16 @@ function M.jump_to_next_edit(skip, count)
         new_location = current
         if bufnr ~= current.bufnr or not skip then
             count = count - 1
+            bufnr = current.bufnr
         end
       end
     end
 
-    if not new_location or bufnr == new_location.bufnr and skip then
+    if not new_location then
         print("[before.nvim]: At the newest entry of the edits list.")
         return
+    elseif initial_bufnr == new_location.bufnr and skip then
+        print("[before.nvim]: Jumped within the newest file of the edits list.")
     end
 
     if new_location then
