@@ -47,15 +47,18 @@ local function assign_location(new_location, location_idx, new_cursor)
 end
 
 local function find_backwards_jump(currentLocation)
-  local local_cursor = M.cursor
-  local lookback_amount = M.cursor
-  for i = 0, lookback_amount do
-    local_cursor = local_cursor - i
+  local number_of_earler_edits = M.cursor - 1
+  local deleted = 0
+  for i = 0, number_of_earler_edits do
+    local local_cursor = M.cursor - i + deleted
     local location = M.edit_locations[local_cursor]
 
     if location and not bufvalid(location.bufnr) and location.file and location.file ~= '' then
-      vim.cmd.edit(location.file)
-      local new_bufnr = vim.api.nvim_get_current_buf()
+      local new_bufnr = vim.fn.bufnr(location.file)
+      if new_bufnr == -1 then
+        vim.cmd.edit(location.file)
+        new_bufnr = vim.api.nvim_get_current_buf()
+      end
       location['bufnr'] = new_bufnr
       M.edit_locations[local_cursor] = location
       vim.g.BEFORE_EDIT_LOCATIONS = M.edit_locations
@@ -63,6 +66,7 @@ local function find_backwards_jump(currentLocation)
 
     if location and should_remove(location) then
       table.remove(M.edit_locations, local_cursor)
+      deleted = deleted + 1
       vim.g.BEFORE_EDIT_LOCATIONS = M.edit_locations
     else
       if location and not same_line(currentLocation, location) then
@@ -87,15 +91,18 @@ local function find_backwards_jump(currentLocation)
 end
 
 local function find_forward_jump(currentLocation)
-  local local_cursor = M.cursor
-  local lookback_amount = M.cursor
-  for i = 0, lookback_amount do
-    local_cursor = local_cursor + i
+  local number_of_later_edits = #M.edit_locations - M.cursor
+  local deleted = 0
+  for i = 0, number_of_later_edits do
+    local local_cursor = M.cursor + i - deleted
     local location = M.edit_locations[local_cursor]
 
     if location and not bufvalid(location.bufnr) and location.file and location.file ~= '' then
-      vim.cmd.edit(location.file)
-      local new_bufnr = vim.api.nvim_get_current_buf()
+      local new_bufnr = vim.fn.bufnr(location.file)
+      if new_bufnr == -1 then
+        vim.cmd.edit(location.file)
+        new_bufnr = vim.api.nvim_get_current_buf()
+      end
       location['bufnr'] = new_bufnr
       M.edit_locations[local_cursor] = location
       vim.g.BEFORE_EDIT_LOCATIONS = M.edit_locations
@@ -103,6 +110,7 @@ local function find_forward_jump(currentLocation)
 
     if location and should_remove(location) then
       table.remove(M.edit_locations, local_cursor)
+      deleted = deleted + 1
       vim.g.BEFORE_EDIT_LOCATIONS = M.edit_locations
     else
       if location and not same_line(currentLocation, location) then
